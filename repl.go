@@ -2,7 +2,10 @@ package main
 
 import (
 	"bufio"
+	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
 	"os"
 	"strings"
 )
@@ -23,6 +26,32 @@ func commandHelp() error {
 	for _, Com := range Coms {
 		fmt.Printf("%v: %v\n", Com.name, Com.description)
 	}
+	return nil
+}
+
+func commandMap() error {
+	res, err := http.Get("https://pokeapi.co/api/v2/location-area/")
+	if err != nil {
+		return err
+	}
+
+	body, err := io.ReadAll(res.Body)
+	if err != nil {
+		return err
+	}
+	defer res.Body.Close()
+
+	locs := pokeResponse{}
+
+	err = json.Unmarshal(body, &locs)
+	if err != nil {
+		return err
+	}
+
+	for _, loc := range locs.Results {
+		fmt.Println(loc.Name)
+	}
+
 	return nil
 }
 
@@ -77,6 +106,10 @@ func Commands() map[string]Command {
 			name:        "help",
 			description: "Lists possible commands",
 			callback:    commandHelp},
+		"map": {
+			name:        "map",
+			description: "Provides Locations",
+			callback:    commandMap},
 	}
 	return myCommands
 }
