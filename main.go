@@ -1,5 +1,11 @@
 package main
 
+import (
+	"gopoke/internal/pokecache"
+	"time"
+)
+
 func main() {
-	startRepl()
+	cache := pokecache.NewCache(30 * time.Second)
+	startRepl(cache)
 }

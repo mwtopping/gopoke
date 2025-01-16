@@ -2,57 +2,19 @@ package main
 
 import (
 	"bufio"
-	"encoding/json"
 	"fmt"
-	"io"
-	"net/http"
 	"os"
 	"strings"
+
+	"gopoke/internal/pokeapi"
+	"gopoke/internal/pokecache"
 )
 
-func commandExit() error {
-	fmt.Println("Closing the Pokedex... Goodbye!")
-	os.Exit(0)
-	return nil
-}
-
-func commandHelp() error {
-	fmt.Println("Welcome to the Pokedex!")
-	fmt.Println("")
-	fmt.Println("CLI Usage:")
-
-	Coms := Commands()
-
-	for _, Com := range Coms {
-		fmt.Printf("%v: %v\n", Com.name, Com.description)
-	}
-	return nil
-}
-
-func commandMap() error {
-	res, err := http.Get("https://pokeapi.co/api/v2/location-area/")
-	if err != nil {
-		return err
-	}
-
-	body, err := io.ReadAll(res.Body)
-	if err != nil {
-		return err
-	}
-	defer res.Body.Close()
-
-	locs := pokeResponse{}
-
-	err = json.Unmarshal(body, &locs)
-	if err != nil {
-		return err
-	}
-
-	for _, loc := range locs.Results {
-		fmt.Println(loc.Name)
-	}
-
-	return nil
+type Config struct {
+	pokeClient pokeapi.Client
+	pokeCache  *pokecache.Cache
+	Next       *string
+	Previous   *string
 }
 
 func cleanInput(text string) []string {
@@ -68,12 +30,17 @@ func cleanInput(text string) []string {
 type Command struct {
 	name        string
 	description string
-	callback    func() error
+	callback    func(c *Config, s string) error
 }
 
-func startRepl() {
+func startRepl(cache *pokecache.Cache) {
 
 	myScanner := bufio.NewScanner(os.Stdin)
+
+	pokeclient := pokeapi.NewClient()
+
+	config := Config{pokeClient: pokeclient,
+		pokeCache: cache}
 
 	// main loop
 	for {
@@ -87,10 +54,15 @@ func startRepl() {
 		}
 
 		if val, ok := Commands()[words[0]]; ok {
-			val.callback()
+			if len(words) > 1 {
+				val.callback(&config, words[1])
+			} else {
+				val.callback(&config, "")
+			}
 		} else {
 			fmt.Println("Unknown Command")
 		}
+
 	}
 
 }
@@ -108,8 +80,16 @@ func Commands() map[string]Command {
 			callback:    commandHelp},
 		"map": {
 			name:        "map",
-			description: "Provides Locations",
-			callback:    commandMap},
+			description: "Provides next 20 locations",
+			callback:    commandMapf},
+		"bmap": {
+			name:        "mapb",
+			description: "Provides previous 20 locations",
+			callback:    commandMapb},
+		"explore": {
+			name:        "explore",
+			description: "List available pokemon in a locatin",
+			callback:    commandExplore},
 	}
 	return myCommands
 }
