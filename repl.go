@@ -15,6 +15,7 @@ type Config struct {
 	pokeCache  *pokecache.Cache
 	Next       *string
 	Previous   *string
+	pokemon    map[string]pokeapi.Pokemon
 }
 
 func cleanInput(text string) []string {
@@ -40,7 +41,7 @@ func startRepl(cache *pokecache.Cache) {
 	pokeclient := pokeapi.NewClient()
 
 	config := Config{pokeClient: pokeclient,
-		pokeCache: cache}
+		pokeCache: cache, pokemon: make(map[string]pokeapi.Pokemon)}
 
 	// main loop
 	for {
@@ -90,6 +91,18 @@ func Commands() map[string]Command {
 			name:        "explore",
 			description: "List available pokemon in a locatin",
 			callback:    commandExplore},
+		"catch": {
+			name:        "catch",
+			description: "Attempt to catch a pokemon",
+			callback:    commandCatch},
+		"inspect": {
+			name:        "inspect",
+			description: "Read Pokedex entry",
+			callback:    commandInspect},
+		"pokedex": {
+			name:        "pokedex",
+			description: "List pokedex",
+			callback:    commandPokedex},
 	}
 	return myCommands
 }

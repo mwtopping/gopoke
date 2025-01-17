@@ -87,3 +87,39 @@ func (c *Client) GetPokemon(wanturl *string) (PokeLocation, error) {
 
 	return locs, nil
 }
+
+func (c *Client) GetPokemonStats(wanturl *string) (Pokemon, error) {
+
+	var url string
+
+	if len(*wanturl) == 0 {
+		return Pokemon{}, fmt.Errorf("Did not provide pokemon name")
+	} else {
+		url = *wanturl
+	}
+
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return Pokemon{}, err
+	}
+
+	res, err := c.httpClient.Do(req)
+	if err != nil {
+		return Pokemon{}, err
+	}
+
+	body, err := io.ReadAll(res.Body)
+	if err != nil {
+		return Pokemon{}, err
+	}
+	defer res.Body.Close()
+
+	locs := Pokemon{}
+
+	err = json.Unmarshal(body, &locs)
+	if err != nil {
+		return Pokemon{}, err
+	}
+
+	return locs, nil
+}

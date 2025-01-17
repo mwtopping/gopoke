@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"gopoke/internal/pokeapi"
+	"math/rand"
 	"os"
 )
 
@@ -168,6 +169,89 @@ func commandExplore(config *Config, loc string) error {
 	}
 	fmt.Println("Addind", url, "to cache")
 	cache.Add(url, rawdata)
+
+	return nil
+}
+
+func commandCatch(config *Config, mon string) error {
+
+	// check if data exists in cache
+	cache := config.pokeCache
+
+	url := "https://pokeapi.co/api/v2/pokemon/" + mon
+
+	if val, ok := cache.Get(url); ok {
+		fmt.Println("Exists in cache")
+		locs := pokeapi.Pokemon{}
+		err := json.Unmarshal(val.Val, &locs)
+		if err != nil {
+			fmt.Println("Error unmarshalling")
+			fmt.Println(err)
+			return err
+		}
+
+		fmt.Printf("Throwing a Pokeball at %v...\n", mon)
+		catchrate := float32(255-locs.BaseExperience) / 256.0
+		if rand.Float32() > catchrate {
+			fmt.Println(mon, "was caught!")
+			config.pokemon[mon] = locs
+		} else {
+			fmt.Println(mon, "got away")
+		}
+
+		return nil
+
+	} else {
+		fmt.Println("Doesn't exist in cache")
+	}
+
+	locs, err := config.pokeClient.GetPokemonStats(&url)
+	if err != nil {
+		return err
+	}
+
+	fmt.Printf("Throwing a Pokeball at %v...\n", mon)
+	catchrate := float32(255-locs.BaseExperience) / 256.0
+	if rand.Float32() > catchrate {
+		fmt.Println(mon, "was caught!")
+		config.pokemon[mon] = locs
+	} else {
+		fmt.Println(mon, "got away")
+	}
+
+	rawdata, rawerr := json.Marshal(locs)
+	if rawerr != nil {
+		return rawerr
+	}
+	fmt.Println("Addind", url, "to cache")
+	cache.Add(url, rawdata)
+
+	return nil
+}
+
+func commandInspect(config *Config, s string) error {
+
+	if val, ok := config.pokemon[s]; ok {
+		fmt.Printf("Name: %v\n", val.Name)
+		fmt.Printf("Weight: %v\n", val.Weight)
+		fmt.Printf("Height: %v\n", val.Height)
+		fmt.Printf("Types:\n")
+		for _, v := range config.pokemon[s].Types {
+			fmt.Printf(" -%v\n", v.Type.Name)
+		}
+	} else {
+		fmt.Println("you have not caught that pokemon")
+	}
+
+	return nil
+}
+
+func commandPokedex(config *Config, s string) error {
+
+	fmt.Println("Your Pokedex:")
+	for _, poke := range config.pokemon {
+		fmt.Printf(" - %v\n", poke.Name)
+	}
 
 	return nil
 }
